@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  zookeeper-v1:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper-v1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2182
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2182:2182"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 2182 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka-v1:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-v1
+    depends_on:
+      zookeeper-v1:
+        condition: service_healthy
+    ports:
+      - "9093:9093"
+      - "29093:29093"
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-v1:2182
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-v1:9093,PLAINTEXT_HOST://localhost:29093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9093 --list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cassandra-v1:
+    image: cassandra:4.1
+    container_name: cassandra-v1
+    ports:
+      - "9043:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=ArbitrageV1Cluster
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe cluster' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  spark-master-v1:
+    image: apache/spark:3.5.0
+    container_name: spark-master-v1
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+    ports:
+      - "8082:8080"
+      - "7078:7077"
+      - "4041:4040"
+    command: /opt/spark/sbin/start-master.sh
+
+  spark-worker-v1:
+    image: apache/spark:3.5.0
+    container_name: spark-worker-v1
+    depends_on:
+      - spark-master-v1
+    ports:
+      - "8083:8081"
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master-v1:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+    command: /opt/spark/sbin/start-worker.sh spark://spark-master-v1:7077
+
+  airflow-postgres-v1:
+    image: postgres:15-alpine
+    container_name: airflow-postgres-v1
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow_v1
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airflow-webserver-v1:
+    image: apache/airflow:2.7.3-python3.10
+    container_name: airflow-webserver-v1
+    depends_on:
+      airflow-postgres-v1:
+        condition: service_healthy
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres-v1:5432/airflow_v1
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./models:/opt/airflow/models
+      - ./config:/opt/airflow/config
+    ports:
+      - "8086:8080"
+    command: >
+      bash -c "airflow db init &&
+              airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin &&
+              airflow webserver"
+
+  airflow-scheduler-v1:
+    image: apache/airflow:2.7.3-python3.10
+    container_name: airflow-scheduler-v1
+    depends_on:
+      - airflow-webserver-v1
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres-v1:5432/airflow_v1
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./models:/opt/airflow/models
+      - ./config:/opt/airflow/config
+    command: airflow scheduler
+
+  streamlit-dashboard-v1:
+    image: apache/airflow:2.7.3-python3.10
+    container_name: streamlit-dashboard-v1
+    depends_on:
+      - kafka-v1
+      - cassandra-v1
+    ports:
+      - "8502:8501"
+    volumes:
+      - ./dashboard:/app/dashboard
+      - ./config:/app/config
+      - ./producers:/app/producers
+      - ./models:/app/models
+    working_dir: /app/dashboard
+    command: >
+      bash -c "pip install --no-cache-dir streamlit pandas numpy plotly kafka-python cassandra-driver requests lightgbm catboost &&
+              streamlit run app.py --server.port=8501 --server.address=0.0.0.0"

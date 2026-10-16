@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flux de Données Animé - Plateforme Arbitrage</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
+    
+    body {
+      background-color: #121212;
+      color: #e5e7eb;
+      font-family: 'Space Grotesk', sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 900px;
+      height: 700px;
+      background-color: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    /* Dashed Border Boxes */
+    .box-group {
+      position: absolute;
+      border: 2px dashed #4b5563;
+      border-radius: 12px;
+      padding: 15px;
+      box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .box-title {
+      position: absolute;
+      top: -12px;
+      left: 20px;
+      background-color: #1a1a1a;
+      padding: 0 10px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #e5e7eb;
+    }
+
+    /* Inner Components */
+    .component {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: absolute;
+      width: 80px;
+    }
+    
+    .icon-wrapper {
+      width: 50px;
+      height: 50px;
+      background: #27272a;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      border: 1px solid #3f3f46;
+      z-index: 10;
+    }
+
+    .comp-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #a1a1aa;
+    }
+
+    /* SVG Animation Canvas */
+    .svg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Marching Ants Paths */
+    .path-orange { stroke: #f97316; stroke-width: 2.5; stroke-dasharray: 8, 8; fill: none; animation: dash-fwd 1s linear infinite; }
+    .path-blue { stroke: #3b82f6; stroke-width: 2.5; stroke-dasharray: 8, 8; fill: none; animation: dash-fwd 1s linear infinite; }
+    .path-green { stroke: #10b981; stroke-width: 2.5; stroke-dasharray: 8, 8; fill: none; animation: dash-fwd 1s linear infinite; }
+    .path-purple { stroke: #8b5cf6; stroke-width: 2.5; stroke-dasharray: 8, 8; fill: none; animation: dash-fwd 1s linear infinite; }
+
+    @keyframes dash-fwd {
+      to { stroke-dashoffset: -16; }
+    }
+
+    /* Glowing arrows for paths */
+    .arrow-head-orange { fill: #f97316; }
+    .arrow-head-blue { fill: #3b82f6; }
+    .arrow-head-green { fill: #10b981; }
+    .arrow-head-purple { fill: #8b5cf6; }
+
+  </style>
+</head>
+<body>
+
+  <div class="canvas-container">
+    
+    <!-- SVG Paths Layer -->
+    <svg class="svg-layer">
+      <defs>
+        <!-- Arrow markers -->
+        <marker id="arrowOrange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head-orange" />
+        </marker>
+        <marker id="arrowBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head-blue" />
+        </marker>
+        <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head-green" />
+        </marker>
+        <marker id="arrowPurple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head-purple" />
+        </marker>
+      </defs>
+
+      <!-- Connection: Data Sources -> Ingestion -->
+      <path d="M 120 130 L 120 220" class="path-orange" marker-end="url(#arrowOrange)" />
+      
+      <!-- Connection: Ingestion -> Pipeline -->
+      <path d="M 170 260 L 290 260" class="path-blue" marker-end="url(#arrowBlue)" />
+
+      <!-- Connection: Pipeline Internal -->
+      <path d="M 330 290 L 330 330" class="path-blue" marker-end="url(#arrowBlue)" />
+      <path d="M 370 260 L 460 260" class="path-blue" marker-end="url(#arrowBlue)" />
+
+      <!-- Connection: Pipeline -> Feature Engineering -->
+      <path d="M 460 260 L 640 260" class="path-purple" marker-end="url(#arrowPurple)" />
+
+      <!-- Connection: Feature Eng -> LightGBM -->
+      <path d="M 680 300 L 680 380" class="path-green" marker-end="url(#arrowGreen)" />
+      
+      <!-- Connection: LightGBM -> Arbitrage -->
+      <path d="M 640 420 L 520 420" class="path-green" marker-end="url(#arrowGreen)" />
+
+      <!-- Connection: Arbitrage -> Storage -->
+      <path d="M 440 420 L 320 420" class="path-orange" marker-end="url(#arrowOrange)" />
+
+      <!-- Connection: Storage -> Dashboard -->
+      <path d="M 280 460 L 280 540" class="path-blue" marker-end="url(#arrowBlue)" />
+
+      <!-- Connection: Dashboard -> User -->
+      <path d="M 320 580 L 730 580 L 730 110" class="path-orange" marker-end="url(#arrowOrange)" />
+      <path d="M 730 60 L 730 60" /> <!-- To trigger Arrow -->
+
+    </svg>
+
+    <!-- BOX: Data Sources -->
+    <div class="box-group" style="top: 40px; left: 40px; width: 160px; height: 110px;">
+      <div class="box-title">Data Sources</div>
+      <div class="component" style="top: 20px; left: 40px;">
+        <div class="icon-wrapper" style="color: #60a5fa;">&#123;;&#125;</div>
+        <div class="comp-label">eBay API (JSON)</div>
+      </div>
+    </div>
+
+    <!-- BOX: Batch Ingestion -->
+    <div class="box-group" style="top: 200px; left: 40px; width: 160px; height: 120px;">
+      <div class="box-title">Batch Ingestion</div>
+      <div class="component" style="top: 20px; left: 40px;">
+        <div class="icon-wrapper" style="color: #f59e0b;">⚡</div>
+        <div class="comp-label">Kafka Bus</div>
+      </div>
+    </div>
+
+    <!-- BOX: Data Pipeline -->
+    <div class="box-group" style="top: 200px; left: 240px; width: 300px; height: 210px;">
+      <div class="box-title">Data Pipeline</div>
+      
+      <div class="component" style="top: 20px; left: 50px;">
+        <div class="icon-wrapper" style="color: #a78bfa;">🧹</div>
+        <div class="comp-label">Clean (Regex)</div>
+      </div>
+
+      <div class="component" style="top: 100px; left: 50px;">
+        <div class="icon-wrapper" style="color: #a78bfa;">✅</div>
+        <div class="comp-label">Validate</div>
+      </div>
+
+      <div class="component" style="top: 20px; left: 180px;">
+        <div class="icon-wrapper" style="color: #a78bfa;">🧩</div>
+        <div class="comp-label">SBERT NLP</div>
+      </div>
+    </div>
+
+    <!-- BOX: Feature Engineering -->
+    <div class="box-group" style="top: 200px; left: 580px; width: 200px; height: 120px;">
+      <div class="box-title">Feature Eng.</div>
+      <div class="component" style="top: 20px; left: 60px;">
+        <div class="icon-wrapper" style="color: #f472b6;">⚙️</div>
+        <div class="comp-label">Condition Grade & Trust Score</div>
+      </div>
+    </div>
+
+    <!-- BOX: Model Deployment -->
+    <div class="box-group" style="top: 360px; left: 580px; width: 200px; height: 120px;">
+      <div class="box-title">ML Pricing Engine</div>
+      <div class="component" style="top: 20px; left: 60px;">
+        <div class="icon-wrapper" style="color: #10b981;">📈</div>
+        <div class="comp-label">LightGBM Quantile</div>
+      </div>
+    </div>
+
+    <!-- BOX: Arbitrage Engine -->
+    <div class="box-group" style="top: 360px; left: 390px; width: 150px; height: 120px;">
+      <div class="box-title">Arbitrage Engine</div>
+      <div class="component" style="top: 20px; left: 35px;">
+        <div class="icon-wrapper" style="color: #ef4444;">⚖️</div>
+        <div class="comp-label">Marge Nette & Frais (-13%)</div>
+      </div>
+    </div>
+
+    <!-- BOX: Storage Layer -->
+    <div class="box-group" style="top: 360px; left: 240px; width: 110px; height: 120px;">
+      <div class="box-title">Data Lake</div>
+      <div class="component" style="top: 20px; left: 15px;">
+        <div class="icon-wrapper" style="color: #38bdf8;">🐘</div>
+        <div class="comp-label">Cassandra</div>
+      </div>
+    </div>
+
+    <!-- BOX: Serve / Consume -->
+    <div class="box-group" style="top: 520px; left: 240px; width: 180px; height: 120px;">
+      <div class="box-title">Consume UI</div>
+      <div class="component" style="top: 20px; left: 50px;">
+        <div class="icon-wrapper" style="color: #fb923c;">📊</div>
+        <div class="comp-label">Streamlit Dashboard</div>
+      </div>
+    </div>
+
+    <!-- User Node -->
+    <div class="component" style="top: 30px; left: 690px;">
+      <div class="icon-wrapper" style="color: #e2e8f0; border-color: #f97316;">👤</div>
+      <div class="comp-label" style="font-size: 14px; color: #fff;">User</div>
+    </div>
+
+  </div>
+
+</body>
+</html>

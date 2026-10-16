@@ -1,0 +1,17 @@
+{
+  "last_run_timestamp": "2026-10-16 10:00:03",
+  "status": "SUCCESS",
+  "frequency": "1 fois par jour (Daily - 03:00 UTC)",
+  "sources_used": [
+    "AutomationDirect",
+    "Radwell Canada",
+    "RS Canada",
+    "DigiKey Canada",
+    "eBay Marketplace"
+  ],
+  "source": "Produits extraits dynamiquement de la base de donn\u00e9es (Cassandra NoSQL)",
+  "products_scraped_count": 12,
+  "new_sales_appended": 60,
+  "next_scheduled_run": "2026-10-17 03:00:00 UTC",
+  "orchestrator": "Apache Airflow DAG (airflow_daily_scraper_dag)"
+}

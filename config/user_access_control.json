@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "id": "USR-001",
+      "username": "admin",
+      "role": "Super Admin",
+      "app_access": true,
+      "api_access": true,
+      "created_at": "2026-10-07T08:00:00Z"
+    },
+    {
+      "id": "USR-002",
+      "username": "lead_data_engineer",
+      "role": "Data Engineer",
+      "app_access": true,
+      "api_access": true,
+      "created_at": "2026-10-07T08:00:00Z"
+    },
+    {
+      "id": "USR-003",
+      "username": "arbitrage_trader",
+      "role": "Trader / Analyst",
+      "app_access": true,
+      "api_access": false,
+      "created_at": "2026-10-07T08:00:00Z"
+    }
+  ]
+}
